@@ -22,6 +22,7 @@ ruby_bundle_fetch = tag_class(attrs = {
     "gem_checksums": attr.string_dict(),
     "bundler_remote": attr.string(default = "https://rubygems.org/"),
     "bundler_checksums": attr.string_dict(),
+    "skip_get_executables_gems": attr.string_list(),
 })
 
 ruby_toolchain = tag_class(attrs = {
@@ -60,6 +61,7 @@ def _ruby_module_extension(module_ctx):
                 gem_checksums = bundle_fetch.gem_checksums,
                 bundler_remote = bundle_fetch.bundler_remote,
                 bundler_checksums = bundle_fetch.bundler_checksums,
+                skip_get_executables_gems = bundle_fetch.skip_get_executables_gems,
             )
             if module_ctx.is_dev_dependency(bundle_fetch):
                 direct_dev_dep_names.append(bundle_fetch.name)
