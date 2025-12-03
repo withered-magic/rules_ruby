@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 {env}
 
@@ -9,5 +10,7 @@ if [[ "{has_git_gem_srcs}" == "1" ]]; then
 fi
 
 {ruby_path} {bundler_exe} install --standalone --local
+
+{patches}
 
 # vim: ft=bash

@@ -13,6 +13,7 @@ rb_bundle_install(
     gems = {gems},
     git_gem_srcs = {git_gem_srcs},
     ruby = {ruby},
+    patches = {patches},
 )
 
 {gem_fragments}

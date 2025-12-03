@@ -9,6 +9,12 @@ load(
     _normalize_path = "normalize_path",
 )
 
+_PATCHES_TEMPLATE = """
+GEMDIR="$(find "{bundle_path}/ruby" -maxdepth 1 -name "*.*")/gems"
+echo "Using GEMDIR=$GEMDIR"
+{patch_cmds}
+"""
+
 def _rb_bundle_install_impl(ctx):
     toolchain = ctx.toolchains["@rules_ruby//ruby:toolchain_type"]
     if ctx.attr.ruby != None:
@@ -65,7 +71,12 @@ def _rb_bundle_install_impl(ctx):
         "BUNDLE_IGNORE_CONFIG": "1",
         "BUNDLE_PATH": _normalize_path(ctx, "/".join([relative_dir, bundle_path.path])),
         "BUNDLE_SHEBANG": _normalize_path(ctx, toolchain.ruby.short_path),
+        "RUBY_BUNDLE_PATH": bundle_path.path,
     })
+
+    patch_cmds = ["patch -d $GEMDIR/%s --strip=1 < %s" % (key, value.files.to_list()[0].path) for key, value in ctx.attr.patches.items()]
+    patches = _PATCHES_TEMPLATE.format(bundle_path = bundle_path.path, patch_cmds = "\n".join(patch_cmds)) if patch_cmds else ""
+    print(patches)
 
     ctx.actions.expand_template(
         template = template,
@@ -76,12 +87,13 @@ def _rb_bundle_install_impl(ctx):
             "{ruby_path}": _normalize_path(ctx, toolchain.ruby.path),
             "{sync_bundle_cache_path}": _normalize_path(ctx, ctx.file._sync_bundle_cache_rb.path),
             "{has_git_gem_srcs}": "1" if len(ctx.files.git_gem_srcs) > 0 else "0",
+            "{patches}": patches,
         },
     )
 
     ctx.actions.run(
         executable = script,
-        inputs = depset([ctx.file.gemfile, ctx.file.gemfile_lock, ctx.file._sync_bundle_cache_rb] + ctx.files.srcs + ctx.files.gems + ctx.files.git_gem_srcs),
+        inputs = depset([ctx.file.gemfile, ctx.file.gemfile_lock, ctx.file._sync_bundle_cache_rb] + ctx.files.srcs + ctx.files.gems + ctx.files.git_gem_srcs, transitive = [target.files for target in ctx.attr.patches.values()]),
         outputs = [binstubs, bundle_path],
         mnemonic = "BundleInstall",
         progress_message = "Running bundle install (%{label})",
@@ -163,6 +175,9 @@ rb_bundle_install = rule(
         ),
         "_windows_constraint": attr.label(
             default = "@platforms//os:windows",
+        ),
+        "patches": attr.string_keyed_label_dict(
+            allow_files = True,
         ),
     },
     toolchains = [

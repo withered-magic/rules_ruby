@@ -140,6 +140,19 @@ def join_and_indent(names, indentation_level = 2):
 
     return string
 
+def join_and_indent_string_keyed_label_dict(d, indentation_level = 2):
+    # type: (dict[list[string]], int) -> string
+    indentation = ""
+    for _ in range(0, indentation_level):
+        indentation += "    "
+
+    string = "{"
+    for key, value in d.items():
+        string += '\n%s"%s": "%s",' % (indentation, key, value)
+    string += "\n%s}" % indentation[:-4]
+
+    return string
+
 def normalize_bzlmod_repository_name(name):
     """Converts Bzlmod repostory to its private name.
 
