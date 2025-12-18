@@ -13,7 +13,7 @@ load("//ruby/private:bundler_checksums.bzl", "BUNDLER_CHECKSUMS")
 load(
     "//ruby/private:utils.bzl",
     _join_and_indent = "join_and_indent",
-    _join_and_indent_string_keyed_label_dict = "join_and_indent_string_keyed_label_dict",
+    _join_and_indent_string_dict = "join_and_indent_string_dict",
     _normalize_bzlmod_repository_name = "normalize_bzlmod_repository_name",
 )
 load("//ruby/private/bundle_fetch:gemfile_lock_parser.bzl", "parse_gemfile_lock")
@@ -305,7 +305,8 @@ def _rb_bundle_fetch_impl(repository_ctx):
             "{gem_install_fragments}": "".join(gem_install_fragments),
             "{env}": repr(repository_ctx.attr.env),
             "{ruby}": ruby_toolchain_attr,
-            "{patches}": _join_and_indent_string_keyed_label_dict(repository_ctx.attr.patches),
+            "{patches}": _join_and_indent_string_dict(repository_ctx.attr.patches),
+            "{exec_properties}": _join_and_indent_string_dict(repository_ctx.attr.exec_properties),
         },
     )
 
@@ -391,9 +392,8 @@ rb_bundle_fetch = repository_rule(
             doc = "List of gems for which to skip finding executables.",
             default = [],
         ),
-        "patches": attr.string_keyed_label_dict(
-            doc = "",
-        ),
+        "patches": attr.string_keyed_label_dict(),
+        "exec_properties": attr.string_dict(),
     },
     doc = """
 Fetches Bundler dependencies to be automatically installed by other targets.

@@ -140,7 +140,7 @@ def join_and_indent(names, indentation_level = 2):
 
     return string
 
-def join_and_indent_string_keyed_label_dict(d, indentation_level = 2):
+def join_and_indent_string_dict(d, indentation_level = 2):
     # type: (dict[list[string]], int) -> string
     indentation = ""
     for _ in range(0, indentation_level):
