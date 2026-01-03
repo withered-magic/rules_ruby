@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require 'fileutils'
 
 raise 'must provide both srcdir and destdir' unless ARGV.length >= 2
 
@@ -12,20 +13,15 @@ def sync_dir(dir)
     destname = File.join($destdir, name)
     stat = File.lstat(srcname)
 
-    if stat.symlink?
-      if srcname.end_with?('.gemspec') || srcname.include?('extconf.rb')
-        File.copy_stream(srcname, destname)
-      else
-        File.symlink(File.readlink(srcname), destname)
-      end
+    if srcname.end_with?('.gemspec') || srcname.include?('extconf.rb') || stat.file?
+      File.copy_stream(srcname, destname)
+    elsif stat.symlink?
+      File.symlink(File.readlink(srcname), destname)
     elsif stat.directory?
       Dir.mkdir(destname)
       sync_dir(name)
-    elsif stat.file?
-      File.symlink(File.join(Dir.pwd, srcname), destname)
     end
   end
 end
 
-Dir.mkdir($destdir)
 sync_dir ''
