@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 {env}
 
@@ -12,5 +13,7 @@
   --no-env-shebang \
   --install-dir {install_dir} \
   --bindir {install_dir}/bin
+
+{patch}
 
 # vim: ft=bash

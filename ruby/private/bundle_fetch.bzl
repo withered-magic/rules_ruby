@@ -47,6 +47,7 @@ rb_gem_install(
     name = "{name}",
     gem = "{cache_path}/{gem}",
     ruby = {ruby},
+    {patch}
 )
 """
 
@@ -257,12 +258,19 @@ def _rb_bundle_fetch_impl(repository_ctx):
     # Fetch Bundler and define an `rb_gem_install()` target for it.
     _download_gem(repository_ctx, gemfile_lock.bundler, cache_path, gemfile_lock.bundler.sha256)
     gem_full_names.append(":%s" % gemfile_lock.bundler.full_name)
+
+    # Generate patch attribute for Bundler if bundle_patch is provided.
+    bundle_patch_attr = ""
+    if repository_ctx.attr.bundle_patch:
+        bundle_patch_attr = 'patch = "{}",'.format(repository_ctx.attr.bundle_patch)
+
     gem_install_fragments.append(
         _GEM_INSTALL_BUILD_FRAGMENT.format(
             name = gemfile_lock.bundler.full_name,
             gem = gemfile_lock.bundler.filename,
             cache_path = cache_path,
             ruby = ruby_toolchain_attr,
+            patch = bundle_patch_attr,
         ),
     )
 
@@ -391,6 +399,10 @@ rb_bundle_fetch = repository_rule(
         "skip_get_executables_gems": attr.string_list(
             doc = "List of gems for which to skip finding executables.",
             default = [],
+        ),
+        "bundle_patch": attr.label(
+            allow_single_file = True,
+            doc = "Patch file to apply to the Bundler gem after installation.",
         ),
         "patches": attr.string_keyed_label_dict(),
         "exec_properties": attr.string_dict(),

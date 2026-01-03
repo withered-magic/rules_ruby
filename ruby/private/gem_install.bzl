@@ -8,6 +8,18 @@ load(
     _normalize_path = "normalize_path",
 )
 
+_PATCH_TEMPLATE = """
+GEMDIR="{install_dir}/gems"
+echo "Applying patch to $GEMDIR/{gem_name} ..."
+patch -d "$GEMDIR/{gem_name}" --strip=1 < {patch_file}
+"""
+
+_PATCH_TEMPLATE_WINDOWS = """
+set "GEMDIR={install_dir}\\gems"
+echo Applying patch to %GEMDIR%\\{gem_name} ...
+patch -d "%GEMDIR%\\{gem_name}" --strip=1 < {patch_file}
+"""
+
 def _rb_gem_install_impl(ctx):
     gem = ctx.file.gem
     install_dir = ctx.actions.declare_directory(gem.basename[:-4])
@@ -26,14 +38,30 @@ def _rb_gem_install_impl(ctx):
         tools.extend(java_toolchain.java_runtime.files.to_list())
         env.update({"JAVA_HOME": java_toolchain.java_runtime.java_home})
 
+    name, _, version = ctx.attr.name.rpartition("-")
+    gem_name = "{}-{}".format(name, version)
+
     if _is_windows(ctx):
         gem_install = ctx.actions.declare_file("gem_install_{}.cmd".format(ctx.label.name))
         template = ctx.file._gem_install_cmd_tpl
         env.update({"PATH": _normalize_path(ctx, toolchain.ruby.dirname) + ";%PATH%"})
+        patch_template = _PATCH_TEMPLATE_WINDOWS
     else:
         gem_install = ctx.actions.declare_file("gem_install_{}.sh".format(ctx.label.name))
         template = ctx.file._gem_install_sh_tpl
         env.update({"PATH": "%s:$PATH" % toolchain.ruby.dirname})
+        patch_template = _PATCH_TEMPLATE
+
+    # Generate patch command if a patch file is provided.
+    patch_cmd = ""
+    patch_inputs = []
+    if ctx.file.patch:
+        patch_cmd = patch_template.format(
+            install_dir = install_dir.path,
+            gem_name = gem_name,
+            patch_file = ctx.file.patch.path,
+        )
+        patch_inputs = [ctx.file.patch]
 
     ctx.actions.expand_template(
         template = template,
@@ -43,13 +71,13 @@ def _rb_gem_install_impl(ctx):
             "{gem_binary}": _normalize_path(ctx, toolchain.gem.path),
             "{gem}": gem.path,
             "{install_dir}": install_dir.path,
+            "{patch}": patch_cmd,
         },
     )
 
-    name, _, version = ctx.attr.name.rpartition("-")
     ctx.actions.run(
         executable = gem_install,
-        inputs = depset([gem, gem_install]),
+        inputs = depset([gem, gem_install] + patch_inputs),
         outputs = [install_dir],
         mnemonic = "GemInstall",
         progress_message = "Installing %{input} (%{label})",
@@ -72,6 +100,10 @@ rb_gem_install = rule(
             allow_single_file = [".gem"],
             mandatory = True,
             doc = "Gem file to install.",
+        ),
+        "patch": attr.label(
+            allow_single_file = True,
+            doc = "Patch file to apply to the gem after installation.",
         ),
         "ruby": attr.label(
             doc = "Override Ruby toolchain to use when installing the gem.",

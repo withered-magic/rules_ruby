@@ -13,4 +13,6 @@
   --install-dir {install_dir} ^
   --bindir {install_dir}/bin
 
+{patch}
+
 :: vim: ft=dosbatch
